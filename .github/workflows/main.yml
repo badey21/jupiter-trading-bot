@@ -1,15 +1,5 @@
-jobs:
-  run-bot:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-      - name: Fix DNS and Install dependencies
+- name: Fix DNS and Run
         run: |
+          # إجبار السيرفر على استخدام DNS جوجل للوصول للإنترنت
           echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
-          pip install httpx solana solders base58
-      - name: Run Bot
-        run: python main.py
+          python main.py
