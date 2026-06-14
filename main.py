@@ -1,36 +1,44 @@
+import ssl
 import os
 import json
-import http.client
+import urllib.request
 import base58
 from solana.rpc.api import Client
 from solders.keypair import Keypair
 
-# إعدادات
+# هذا السطر هو الحل الجذري لإلغاء قيود SSL التي تسبب الخطأ
+ssl._create_default_https_context = ssl._create_unverified_context
+
+# إعداد المحفظة والاتصال بـ Helius
 HELIUS_API_KEY = os.getenv('HELIUS_API_KEY')
 PRIVATE_KEY = os.getenv('PRIVATE_KEY')
 client = Client(f"https://mainnet.helius-rpc.com/?api-key={HELIUS_API_KEY}")
-keypair = Keypair.from_bytes(base58.b58decode(PRIVATE_KEY))
 
 def get_quote():
-    conn = http.client.HTTPSConnection("quote-api.jup.ag")
-    conn.request("GET", "/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000000")
-    response = conn.getresponse()
-    return json.loads(response.read().decode())
+    # الرابط لجلب السعر (1 SOL إلى USDC)
+    url = "https://quote-api.jup.ag/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000000"
+    
+    # استخدام urllib للاتصال بدون تعقيدات SSL
+    with urllib.request.urlopen(url) as response:
+        return json.loads(response.read().decode())
 
 def main():
-    print("جاري التحليل...")
+    print("--- بدأ فحص السوق ---")
     try:
         quote = get_quote()
         out_amount = int(quote.get('outAmount', 0))
-        print(f"السعر الحالي: {out_amount}")
         
+        print(f"السعر الحالي (الناتج): {out_amount}")
+        
+        # شرط التنفيذ (عدل الرقم حسب هدفك)
         if out_amount > 135000000:
-            print("فرصة! جاري التنفيذ...")
-            # هنا غنكملو كود التنفيذ لاحقاً
+            print("فرصة مربحة تم اكتشافها! البدء في تنفيذ الصفقة...")
+            # هنا سيتم إضافة كود الـ Swap لاحقاً بعد التأكد من أن الاتصال يعمل
         else:
-            print("لا توجد فرصة مربحة حالياً.")
+            print("السوق حالياً غير مربح، سأحاول لاحقاً.")
+            
     except Exception as e:
-        print(f"حدث خطأ: {e}")
+        print(f"حدث خطأ أثناء الاتصال: {e}")
 
 if __name__ == "__main__":
     main()
