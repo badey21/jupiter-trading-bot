@@ -1,44 +1,40 @@
-import ssl
 import os
 import json
-import urllib.request
+import subprocess
 import base58
 from solana.rpc.api import Client
 from solders.keypair import Keypair
 
-# هذا السطر هو الحل الجذري لإلغاء قيود SSL التي تسبب الخطأ
-ssl._create_default_https_context = ssl._create_unverified_context
-
-# إعداد المحفظة والاتصال بـ Helius
+# إعداد الاتصال
 HELIUS_API_KEY = os.getenv('HELIUS_API_KEY')
 PRIVATE_KEY = os.getenv('PRIVATE_KEY')
 client = Client(f"https://mainnet.helius-rpc.com/?api-key={HELIUS_API_KEY}")
+keypair = Keypair.from_bytes(base58.b58decode(PRIVATE_KEY))
 
 def get_quote():
-    # الرابط لجلب السعر (1 SOL إلى USDC)
+    # كنستعملو curl باش نتجاوزو كل مشاكل الـ SSL ديال بايثون
     url = "https://quote-api.jup.ag/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000000"
     
-    # استخدام urllib للاتصال بدون تعقيدات SSL
-    with urllib.request.urlopen(url) as response:
-        return json.loads(response.read().decode())
+    # -k كيعني تجاهل الـ SSL
+    # -s كيعني صامت (بدون إحصائيات)
+    cmd = ["curl", "-sk", url]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return json.loads(result.stdout)
 
 def main():
-    print("--- بدأ فحص السوق ---")
     try:
+        print("جاري جلب السعر عبر curl...")
         quote = get_quote()
         out_amount = int(quote.get('outAmount', 0))
+        print(f"السعر اللي وصل: {out_amount}")
         
-        print(f"السعر الحالي (الناتج): {out_amount}")
-        
-        # شرط التنفيذ (عدل الرقم حسب هدفك)
         if out_amount > 135000000:
-            print("فرصة مربحة تم اكتشافها! البدء في تنفيذ الصفقة...")
-            # هنا سيتم إضافة كود الـ Swap لاحقاً بعد التأكد من أن الاتصال يعمل
+            print("فرصة ربح! غنكملو كود التنفيذ دابا...")
         else:
-            print("السوق حالياً غير مربح، سأحاول لاحقاً.")
+            print("السوق هادئ...")
             
     except Exception as e:
-        print(f"حدث خطأ أثناء الاتصال: {e}")
+        print(f"خطأ: {e}")
 
 if __name__ == "__main__":
     main()
