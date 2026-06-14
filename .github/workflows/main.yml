@@ -1,31 +1,17 @@
 name: Solana Bot
-
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:  # هادي باش تقدر دير Run يدوي من GitHub
-
+on: [workflow_dispatch]
 jobs:
   run-bot:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
+      - uses: actions/checkout@v3
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-
       - name: Install dependencies
-        run: |
-          pip install solana solders base58
-
-      - name: Fix DNS and Run
-        run: |
-          # هاد الخطوة هي اللي غتحل مشكل الاتصال بالإنترنت
-          echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
-          python main.py
+        run: pip install requests
+      - name: Run Bot
+        run: python main.py
         env:
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
-          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
