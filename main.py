@@ -1,20 +1,13 @@
 import os
 import json
-import requests
+import httpx
 from solana.rpc.api import Client
-from solders.keypair import Keypair
 import base58
 
-# إعداد الاتصال باستخدام API Key الخاص بـ Helius
+# إعدادات
 HELIUS_API_KEY = os.getenv('HELIUS_API_KEY')
-PRIVATE_KEY = os.getenv('PRIVATE_KEY')
-
-# إعداد الـ Client للاتصال الموثوق
-client = Client(f"https://mainnet.helius-rpc.com/?api-key={HELIUS_API_KEY}")
-
-def get_price_via_helius():
-    # في هاد الحالة، كنجلبو البيانات من Jupiter ولكن من خلال سيرفرات Helius 
-    # اللي كيعتبرها GitHub "صديقة" وماكيحضرهاش
+# ملاحظة: سنعتمد على httpx لأنه يدعم اتصالات أكثر استقراراً
+def get_quote():
     url = "https://quote-api.jup.ag/v6/quote"
     params = {
         'inputMint': 'So11111111111111111111111111111111111111112',
@@ -22,27 +15,21 @@ def get_price_via_helius():
         'amount': '1000000000',
         'slippageBps': '50'
     }
+    headers = {"User-Agent": "Mozilla/5.0"}
     
-    # طلب البيانات
-    response = requests.get(url, params=params)
-    return response.json()
+    # استخدام httpx مع تعطيل التحقق من الشهادات
+    with httpx.Client(verify=False) as client:
+        response = client.get(url, params=params, headers=headers, timeout=10.0)
+        return response.json()
 
 def main():
-    print("--- بدأ فحص السوق عبر Helius ---")
+    print("--- محاولة فحص السوق ---")
     try:
-        data = get_price_via_helius()
+        data = get_quote()
         out_amount = int(data.get('outAmount', 0))
-        
-        print(f"السعر الحالي (outAmount): {out_amount}")
-        
-        if out_amount > 135000000:
-            print("فرصة مربحة! جاري تجهيز الـ Swap...")
-            # هنا يمكنك إضافة كود تنفيذ الصفقة لاحقاً
-        else:
-            print("السوق هادئ حالياً.")
-            
+        print(f"السعر الحالي: {out_amount}")
     except Exception as e:
-        print(f"حدث خطأ أثناء الاتصال: {e}")
+        print(f"حدث خطأ: {e}")
 
 if __name__ == "__main__":
     main()
