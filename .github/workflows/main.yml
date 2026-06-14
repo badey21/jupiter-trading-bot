@@ -1,22 +1,23 @@
 name: Solana Bot
+
 on:
   schedule:
-    - cron: '*/5 * * * *' # هاد البوت غيخدم أوتوماتيكياً كل 5 دقائق
-  workflow_dispatch: # باش تقدر تخدمو يدوياً وقتما بغيتي
+    - cron: '*/5 * * * *' # هادي هي اللي كتقول ليه يخدم كل 5 دقايق
+  workflow_dispatch:      # هادي هي اللي كتزيد زر "Run workflow" يدوياً
 
 jobs:
-  run-bot:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.9'
       - name: Install dependencies
-        run: pip install requests solders base58 python-dotenv
+        run: pip install requests solders base58 solana
       - name: Run Bot
         env:
-          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
         run: python main.py
