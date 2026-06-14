@@ -1,33 +1,43 @@
+import os
 import requests
-import urllib3
-import ssl
-from requests.adapters import HTTPAdapter
+from solana.rpc.api import Client
+from solders.keypair import Keypair
+from solders.transaction import VersionedTransaction
+import base58
 
-# 1. إعداد الـ Adapter باش يفرض استخدام TLS الحديث
-class TLSAdapter(HTTPAdapter):
-    def init_poolmanager(self, *args, **kwargs):
-        ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-        ctx.set_ciphers('DEFAULT@SECLEVEL=1') # خفض مستوى الأمان مؤقتاً لتجاوز البلوكاج
-        kwargs['ssl_context'] = ctx
-        return super(TLSAdapter, self).init_poolmanager(*args, **kwargs)
+# إعداد الاتصال
+client = Client(f"https://mainnet.helius-rpc.com/?api-key={os.getenv('HELIUS_API_KEY')}")
+keypair = Keypair.from_bytes(base58.b58decode(os.getenv("PRIVATE_KEY")))
 
-# 2. إعداد الـ Session
-session = requests.Session()
-session.mount('https://', TLSAdapter())
-session.headers.update({
-    'Host': 'quote-api.jup.ag',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-})
+def get_quote(amount):
+    """جلب أفضل عرض من Jupiter"""
+    url = f"https://quote-api.jup.ag/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount={amount}&slippageBps=50"
+    return requests.get(url).json()
 
-# 3. دالة تجربة الاتصال (بدون تعقيدات)
-def test_connection():
-    try:
-        # استعملنا الـ IP المباشر اللي ديجا جربناه
-        url = "https://104.21.75.158/v6/quote"
-        params = {'inputMint': 'So11111111111111111111111111111111111111112', 'outputMint': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', 'amount': '100000000', 'slippageBps': 50}
-        response = session.get(url, params=params, timeout=10, verify=False)
-        print("اتصال ناجح! البيانات:", response.json())
-    except Exception as e:
-        print("خطأ لا يزال قائماً:", e)
+def execute_swap(quote_data):
+    """تنفيذ عملية البيع والشراء"""
+    url = "https://quote-api.jup.ag/v6/swap"
+    payload = {
+        "quoteResponse": quote_data,
+        "userPublicKey": str(keypair.pubkey()),
+        "wrapAndUnwrapSol": True
+    }
+    response = requests.post(url, json=payload).json()
+    return response # هنا كيرجع بيانات الصفقة اللي غنتسنيوها
 
-test_connection()
+def main():
+    # 1. تحليل السوق
+    print("جاري تحليل الفرص...")
+    quote = get_quote(1000000000) # 1 SOL
+    
+    # 2. حساب الربح (مثلاً إذا كان السعر أكبر من X)
+    out_amount = int(quote['outAmount'])
+    if out_amount > 135000000: # شرط الربح (مثلاً)
+        print(f"فرصة مربحة! جاري تنفيذ الصفقة بـ {out_amount}...")
+        # swap = execute_swap(quote)
+        # print("تمت الصفقة بنجاح!")
+    else:
+        print(f"لا توجد فرصة مربحة حالياً (الناتج: {out_amount/10**6}).")
+
+if __name__ == "__main__":
+    main()
